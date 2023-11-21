@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCompositionContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,7 +45,6 @@ class ComposeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
         setContent {
             ComposeScreen(viewModel)
         }
@@ -54,13 +54,35 @@ class ComposeActivity : ComponentActivity() {
 @Composable
 fun ComposeScreen(viewModel: ComposeViewModel = ComposeViewModel()) {
     val state = viewModel.listSizeLiveData.observeAsState()
+
     Surface(modifier = Modifier.fillMaxSize()) {
-        Column {
-            InputListSize() {
-                viewModel.changeListSize(it)
-            }
-            SaveLongColumn(listSize = state.value ?: 0)
+
+        when (state.value) {
+            is ComposeViewModel.ComposeState.Loading -> ShowLoading()
+            is ComposeViewModel.ComposeState.ShowList -> ShowList(viewModel, state.value as ComposeViewModel.ComposeState.ShowList)
+            null -> TODO()
         }
+
+    }
+}
+
+@Composable
+fun ShowLoading() {
+    Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun ShowList(
+    viewModel: ComposeViewModel,
+    showListState: ComposeViewModel.ComposeState.ShowList,
+) {
+    Column {
+        InputListSize() {
+            viewModel.changeListSize(it)
+        }
+        SaveLongColumn(listSize = showListState.listSize)
     }
 }
 
@@ -70,13 +92,14 @@ private fun UnsaveLongList(name: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.SpaceEvenly
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.SpaceEvenly
     ) {
         for (i in 0..1500)
             TopText()
 
-        Text(text = "hello world", fontSize = 16.sp)
         Text(text = "hello world$name ")
+        Text(text = "hello world", fontSize = 16.sp)
 
     }
 }
@@ -108,6 +131,7 @@ fun InputListSize(changeSize: (Int) -> Unit = {}) {
     }
     Row(horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically) {
         TextField(
+            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
             value = inputState.value,
             onValueChange = {
                 inputState.value = it
